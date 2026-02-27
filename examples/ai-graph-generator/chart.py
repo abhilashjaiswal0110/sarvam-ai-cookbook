@@ -8,12 +8,38 @@ import re
 
 load_dotenv()
 
+def _build_llm_client():
+    """Return an OpenAI-compatible client and the model name to use.
+
+    Priority:
+    1. Azure OpenAI  – when AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT and
+                       AZURE_OPENAI_DEPLOYMENT are all set.
+    2. Sarvam AI     – fallback using SARVAM_API_KEY (default).
+    """
+    azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
+    azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+    azure_deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
+    azure_api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+
+    if azure_key and azure_endpoint and azure_deployment:
+        client = openai.AzureOpenAI(
+            api_key=azure_key,
+            azure_endpoint=azure_endpoint,
+            api_version=azure_api_version,
+        )
+        return client, azure_deployment
+
+    # Default: Sarvam AI
+    client = openai.OpenAI(
+        base_url="https://api.sarvam.ai/v1/",
+        api_key=os.environ.get("SARVAM_API_KEY"),
+    )
+    return client, "sarvam-m"
+
+
 class VisualizationAgent:
     def __init__(self):
-        self.client = openai.OpenAI(
-            base_url="https://api.sarvam.ai/v1/",
-            api_key=os.environ.get("SARVAM_API_KEY")
-        )
+        self.client, self.model = _build_llm_client()
         self.last_generated_code = None
         
     def clean_generated_code(self, code):
@@ -43,9 +69,9 @@ class VisualizationAgent:
         Do not include any markdown, comments, or explanations - just the code."""
         
         try:
-            # Get code generation from Sarvam
+            # Get code generation from LLM (Sarvam or Azure OpenAI)
             response = self.client.chat.completions.create(
-                model="sarvam-m",
+                model=self.model,
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_request}
