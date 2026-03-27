@@ -111,7 +111,32 @@ class SarvamClient:
                 url, headers=self._bearer_headers, json=payload, timeout=30
             )
             response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise SarvamAPIError(
+                    "Chat completion returned invalid JSON"
+                ) from exc
+
+            choices = data.get("choices") if isinstance(data, dict) else None
+            if not isinstance(choices, list) or not choices:
+                raise SarvamAPIError(
+                    "Chat completion response missing non-empty 'choices' list"
+                )
+
+            message = choices[0].get("message") if isinstance(choices[0], dict) else None
+            if not isinstance(message, dict):
+                raise SarvamAPIError(
+                    "Chat completion response missing 'message' object in first choice"
+                )
+
+            content = message.get("content")
+            if not isinstance(content, str):
+                raise SarvamAPIError(
+                    "Chat completion response missing 'message.content' string"
+                )
+
+            return content
         except requests.RequestException as exc:
             raise SarvamAPIError(f"Chat completion failed: {exc}") from exc
 
@@ -137,7 +162,7 @@ class SarvamClient:
             audios = response.json().get("audios", [])
             if audios:
                 return base64.b64decode(audios[0])
-        except requests.RequestException:
+        except (requests.RequestException, Exception):
             return None
         return None
 
@@ -146,7 +171,8 @@ class SarvamClient:
     ) -> str:
         """Transcribe audio bytes to text.
 
-        Returns the transcript string, or empty string on failure.
+        Returns the transcript string (possibly empty if the response has no
+        transcript). Raises SarvamAPIError on request or HTTP failures.
         """
         url = f"{SARVAM_BASE_URL}/speech-to-text"
         headers = {"api-subscription-key": self.api_key}
@@ -165,9 +191,10 @@ class SarvamClient:
             raise SarvamAPIError(f"Speech-to-text failed: {exc}") from exc
 
     def analyze_sentiment(self, text: str) -> str:
-        """Analyze sentiment of English text via text-analytics.
+        """Analyze the urgency level of an English IT support request.
 
-        Returns "positive", "negative", or "neutral".
+        Returns one of "critical", "high", "medium", or "low".
+        Defaults to "medium" if the service does not provide an answer or on failure.
         """
         import json
 
