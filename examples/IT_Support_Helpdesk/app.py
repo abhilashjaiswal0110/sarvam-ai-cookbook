@@ -147,7 +147,7 @@ with tab_report:
     # ── Voice input ──────────────────────────────────────────────────────────
     with st.expander("🎙️ Upload audio to describe your issue"):
         audio_file = st.file_uploader(
-            "Upload WAV / MP3 (max 10 MB)", type=["wav", "mp3"]
+            "Upload WAV (max 10 MB)", type=["wav"]
         )
         if audio_file and st.button("Transcribe Audio"):
             with st.spinner("Transcribing…"):
@@ -215,12 +215,12 @@ with tab_report:
                 try:
                     reply = client.chat(messages, reasoning_effort=reasoning)
                 except SarvamAPIError as e:
-                    reply = f"I'm unable to connect to the AI service right now. Error: {e}"
+                    reply = f"We're unable to connect to the service right now. Error: {e}"
 
             st.markdown(reply)
 
             if tts_enabled:
-                _play_tts(reply, st.session_state.language)
+                _play_tts(reply, detected_lang)
 
         st.session_state.chat_history.append({"role": "assistant", "content": reply})
         st.session_state.last_response = reply
@@ -240,6 +240,7 @@ with tab_report:
             "category": _auto_category(search_text),
             "priority": _auto_priority(search_text),
             "resolution_notes": reply,
+            "detected_lang": detected_lang,
         }
 
     # ── Ticket creation from current conversation ────────────────────────────
@@ -273,7 +274,7 @@ with tab_report:
                     category=category,
                     priority=priority,
                     user_name=st.session_state.user_name,
-                    user_language=st.session_state.language,
+                    user_language=pt.get("detected_lang", st.session_state.language),
                     resolution_notes=pt["resolution_notes"],
                 )
                 st.success(f"Ticket **{ticket['id']}** created successfully!")
