@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -25,6 +27,7 @@ class TicketManager:
 
     def __init__(self, storage_path: str = TICKETS_FILE):
         self._path = storage_path
+        self._logger = logging.getLogger(__name__)
         self._tickets: dict[str, dict] = self._load()
 
     # ── Persistence helpers ─────────────────────────────────────────────────
@@ -34,13 +37,38 @@ class TicketManager:
             try:
                 with open(self._path, encoding="utf-8") as f:
                     return json.load(f)
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError) as exc:
+                backup = self._path + ".corrupt"
+                try:
+                    os.replace(self._path, backup)
+                    self._logger.warning(
+                        "Tickets file corrupt — backed up to %s: %s", backup, exc
+                    )
+                except OSError:
+                    self._logger.error("Tickets file corrupt and backup failed: %s", exc)
                 return {}
         return {}
 
     def _save(self) -> None:
-        with open(self._path, "w", encoding="utf-8") as f:
-            json.dump(self._tickets, f, ensure_ascii=False, indent=2)
+        dir_name = os.path.dirname(self._path) or "."
+        fd, tmp = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(self._tickets, f, ensure_ascii=False, indent=2)
+            try:
+                os.replace(tmp, self._path)
+            except PermissionError:
+                # On Windows, os.replace may fail with locked files;
+                # fall back to a direct overwrite.
+                with open(self._path, "w", encoding="utf-8") as f:
+                    json.dump(self._tickets, f, ensure_ascii=False, indent=2)
+                os.unlink(tmp)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
     # ── Public API ──────────────────────────────────────────────────────────
 

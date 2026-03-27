@@ -73,5 +73,6 @@ Always respond in the same language the user writes in. Keep responses concise b
 
 TTS_SPEAKER = "meera"
 TTS_MODEL = "bulbul:v2"
-TICKETS_FILE = "tickets.json"
+import os as _os
+TICKETS_FILE = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "tickets.json")
 MAX_CHAT_HISTORY = 10
