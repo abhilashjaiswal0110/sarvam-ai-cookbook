@@ -1,3 +1,4 @@
+.vscode/
 examples/**/__pycache__
 examples/**/*.pyc
 examples/**/*.pyo
