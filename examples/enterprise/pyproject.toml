@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "sarvam-enterprise"
+version = "1.0.0"
+description = "Production-grade multilingual AI applications on Sarvam AI"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "tenacity>=8.2.0",
+    "structlog>=23.2.0",
+]
+
+[project.optional-dependencies]
+web = [
+    "streamlit>=1.32.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "S", "B", "A", "C4", "UP", "RUF"]
+ignore = ["S101"]  # allow assert in tests
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers"
