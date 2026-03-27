@@ -11,7 +11,7 @@ An end-to-end IT support helpdesk application powered by **Sarvam AI**, built fo
 | Cross-language KB search (auto-translate to English) | Translation (`/translate`) |
 | Voice-based issue reporting | Speech-to-Text (`/speech-to-text`) |
 | Read-aloud AI responses | Text-to-Speech (`/text-to-speech`, Bulbul v2) |
-| Auto-assign ticket priority from issue text | Keyword heuristics + Text Analytics |
+| Auto-assign ticket priority from issue text | Keyword heuristics |
 
 ### Application Tabs
 

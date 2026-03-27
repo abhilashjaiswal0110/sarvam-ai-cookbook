@@ -6,7 +6,6 @@ and TicketManager — all external HTTP calls are mocked.
 
 import sys
 import os
-import tempfile
 from unittest.mock import patch, MagicMock
 
 import pytest

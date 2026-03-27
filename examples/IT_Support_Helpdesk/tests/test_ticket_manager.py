@@ -3,14 +3,13 @@
 import sys
 import os
 import json
-import tempfile
 
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from ticket_manager import TicketManager, TicketNotFoundError
-from config import TICKET_STATUSES, PRIORITY_LEVELS, ISSUE_CATEGORIES
+from config import TICKET_STATUSES, PRIORITY_LEVELS
 
 
 @pytest.fixture
