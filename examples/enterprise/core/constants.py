@@ -38,9 +38,7 @@ SUPPORTED_LANGUAGES: dict[str, str] = {
     "od-IN": "Odia",
 }
 
-LANGUAGE_DISPLAY_NAMES: dict[str, str] = {
-    code: name for code, name in SUPPORTED_LANGUAGES.items()
-}
+LANGUAGE_DISPLAY_NAMES: dict[str, str] = dict(SUPPORTED_LANGUAGES.items())
 
 LANGUAGE_SCRIPTS: dict[str, str] = {
     "hi-IN": "Devanagari",

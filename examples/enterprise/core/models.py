@@ -2,25 +2,24 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Enums ──────────────────────────────────────────────────────────
 
-class SpeakerGender(str, Enum):
+class SpeakerGender(StrEnum):
     MALE = "Male"
     FEMALE = "Female"
 
 
-class TranslationMode(str, Enum):
+class TranslationMode(StrEnum):
     FORMAL = "formal"
     CLASSIC_COLLOQUIAL = "classic-colloquial"
 
 
-class ReasoningEffort(str, Enum):
+class ReasoningEffort(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

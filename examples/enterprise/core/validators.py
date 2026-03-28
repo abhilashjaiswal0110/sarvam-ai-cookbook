@@ -10,7 +10,7 @@ from core.exceptions import ValidationError
 
 
 def sanitize_text(text: str) -> str:
-    """Sanitize user-supplied text: strip, escape HTML, limit length."""
+    """Sanitize user-supplied text: strip, escape HTML, collapse whitespace."""
     text = text.strip()
     text = html.escape(text, quote=True)
     # Collapse whitespace

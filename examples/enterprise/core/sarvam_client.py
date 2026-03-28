@@ -31,7 +31,6 @@ from core.constants import (
     TTS_URL,
 )
 from core.exceptions import APIError, AuthenticationError, RateLimitError
-from core.logging_config import get_logger
 from core.middleware import AuditLogger, RateLimiter
 from core.models import (
     ChatMessage,
@@ -44,13 +43,10 @@ from core.models import (
 )
 from core.utils import chunk_text
 from core.validators import (
-    sanitize_text,
     validate_language_code,
     validate_non_empty,
     validate_text_length,
 )
-
-logger = get_logger("sarvam_client")
 
 _REQUEST_TIMEOUT = 30  # seconds
 
@@ -164,7 +160,7 @@ class SarvamClient:
                 status_code=resp.status_code,
             )
 
-        result = resp.json()
+        result: dict[str, Any] = resp.json()
         self._audit.log_response(
             request_id=request_id,
             status="success",
@@ -259,11 +255,16 @@ class SarvamClient:
         if language_code != "unknown":
             language_code = validate_language_code(language_code)
 
-        content_type = "audio/wav"
-        if filename.endswith(".mp3"):
-            content_type = "audio/mpeg"
-        elif filename.endswith(".ogg"):
-            content_type = "audio/ogg"
+        audio_mime = {
+            "wav": "audio/wav",
+            "mp3": "audio/mpeg",
+            "ogg": "audio/ogg",
+            "flac": "audio/flac",
+            "aac": "audio/aac",
+            "m4a": "audio/mp4",
+        }
+        ext = filename.rsplit(".", maxsplit=1)[-1].lower() if "." in filename else ""
+        content_type = audio_mime.get(ext, "audio/wav")
 
         result = self._request(
             "POST",

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import IO
 
 from core.constants import SUPPORTED_LANGUAGES
@@ -12,7 +12,7 @@ from core.sarvam_client import SarvamClient
 from core.validators import sanitize_text
 
 
-class EmergencyType(str, Enum):
+class EmergencyType(StrEnum):
     FIRE = "fire"
     MEDICAL = "medical"
     POLICE = "police"
@@ -20,7 +20,7 @@ class EmergencyType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class UrgencyLevel(str, Enum):
+class UrgencyLevel(StrEnum):
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"

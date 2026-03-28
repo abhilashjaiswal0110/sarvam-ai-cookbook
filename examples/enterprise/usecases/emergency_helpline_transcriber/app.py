@@ -84,10 +84,10 @@ def main() -> None:
         with col1:
             st.subheader("Call Details")
             st.markdown(f"**Language:** {analysis.detected_language}")
-            st.markdown(f"**Original Transcript:**")
+            st.markdown("**Original Transcript:**")
             st.text_area("", analysis.transcript, height=120, disabled=True, key="orig")
 
-            st.markdown(f"**English Translation:**")
+            st.markdown("**English Translation:**")
             st.text_area("", analysis.english_translation, height=120, disabled=True, key="en")
 
         with col2:

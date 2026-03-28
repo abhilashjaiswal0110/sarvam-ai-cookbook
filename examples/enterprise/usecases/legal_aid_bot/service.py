@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from core.constants import SUPPORTED_LANGUAGES
-from core.models import ChatMessage, ConversationSession
+from core.models import ConversationSession
 from core.sarvam_client import SarvamClient
 from core.validators import sanitize_text
 from usecases.legal_aid_bot.knowledge_base import format_topic_for_prompt
-
 
 _SYSTEM_PROMPT = """\
 You are a Legal Aid Assistant for Indian citizens. You explain legal rights in \

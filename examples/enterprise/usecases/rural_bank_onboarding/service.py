@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
-from core.models import ChatMessage, ConversationSession
+from core.models import ConversationSession
 from core.sarvam_client import SarvamClient
 from core.validators import sanitize_text
 
 
-class KYCStep(str, Enum):
+class KYCStep(StrEnum):
     WELCOME = "welcome"
     LANGUAGE_SELECT = "language_select"
     PERSONAL_INFO = "personal_info"

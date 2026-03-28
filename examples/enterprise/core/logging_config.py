@@ -9,7 +9,6 @@ from typing import Any
 
 import structlog
 
-
 # ── PII Masking ────────────────────────────────────────────────────
 _PII_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Aadhaar: 12-digit number (with optional spaces/dashes)
@@ -81,4 +80,4 @@ def configure_logging(
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     """Return a named structured logger."""
-    return structlog.get_logger(name)
+    return structlog.get_logger(name)  # type: ignore[no-any-return]

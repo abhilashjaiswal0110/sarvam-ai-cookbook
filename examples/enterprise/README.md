@@ -10,8 +10,7 @@ Production-grade, multilingual AI applications built on the [Sarvam AI](https://
 enterprise/
 ├── core/                              # Shared infrastructure library
 │   ├── config.py                      # Centralized configuration management
-│   ├── sarvam_client.py               # Unified Sarvam API client (retry, circuit-breaker)
-│   ├── auth.py                        # Authentication & API key validation
+│   ├── sarvam_client.py               # Unified Sarvam API client (retry, rate limiting)
 │   ├── models.py                      # Pydantic data models (request/response)
 │   ├── exceptions.py                  # Custom exception hierarchy
 │   ├── validators.py                  # Input validation & sanitization
@@ -78,10 +77,10 @@ cp .env.example .env
 
 ```bash
 # Example: Rural Bank Onboarding
-python -m usecases.rural_bank_onboarding.app
+streamlit run usecases/rural_bank_onboarding/app.py
 
 # Example: Emergency Helpline Transcriber
-python -m usecases.emergency_helpline_transcriber.app
+streamlit run usecases/emergency_helpline_transcriber/app.py
 
 # Run all tests
 pytest tests/ -v

@@ -62,7 +62,7 @@ def main() -> None:
     with tab_text:
         language = st.selectbox(
             "Your language",
-            ["auto"] + list(SUPPORTED_LANGUAGES.keys()),
+            ["auto", *list(SUPPORTED_LANGUAGES.keys())],
             format_func=lambda c: "Auto-detect" if c == "auto" else SUPPORTED_LANGUAGES.get(c, c),
         )
         grievance = st.text_area(

@@ -52,7 +52,7 @@ def main() -> None:
         )
         topic = st.selectbox(
             "Legal Topic",
-            [""] + get_topic_names(),
+            ["", *get_topic_names()],
             format_func=lambda t: LEGAL_TOPICS[t]["title"] if t else "General / Ask anything",
         )
 
@@ -77,7 +77,7 @@ def main() -> None:
 
         # Show available topics
         st.subheader("Available Topics")
-        for key, info in LEGAL_TOPICS.items():
+        for _key, info in LEGAL_TOPICS.items():
             with st.expander(info["title"]):
                 st.write(info["summary"])
         return

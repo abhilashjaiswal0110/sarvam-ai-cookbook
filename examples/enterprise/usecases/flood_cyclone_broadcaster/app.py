@@ -81,7 +81,7 @@ def main() -> None:
         # Quick-fill from samples
         sample = st.selectbox(
             "Use sample alert",
-            ["Custom"] + list(_SAMPLE_ALERTS.keys()),
+            ["Custom", *list(_SAMPLE_ALERTS.keys())],
         )
         if sample != "Custom":
             default_text = _SAMPLE_ALERTS[sample]

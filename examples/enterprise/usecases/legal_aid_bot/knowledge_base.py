@@ -27,14 +27,20 @@ LEGAL_TOPICS: dict[str, dict[str, str]] = {
             "Common issues include boundary disputes, encroachment, and succession rights."
         ),
         "key_points": (
-            "1. Always verify land ownership through official revenue records (7/12 extract, khata).\n"
-            "2. Registration of sale deeds is mandatory under the Registration Act, 1908.\n"
-            "3. Women have equal inheritance rights under the Hindu Succession (Amendment) Act, 2005.\n"
+            "1. Always verify land ownership through official revenue "
+            "records (7/12 extract, khata).\n"
+            "2. Registration of sale deeds is mandatory under "
+            "the Registration Act, 1908.\n"
+            "3. Women have equal inheritance rights under the "
+            "Hindu Succession (Amendment) Act, 2005.\n"
             "4. Tribal land cannot be transferred to non-tribals in Scheduled Areas.\n"
             "5. For disputes, approach the Tehsildar / Revenue Court first.\n"
             "6. Digitized land records are available through state Bhulekh/Bhoomi portals."
         ),
-        "related_laws": "Transfer of Property Act 1882, Registration Act 1908, Hindu Succession Act",
+        "related_laws": (
+            "Transfer of Property Act 1882, Registration Act 1908, "
+            "Hindu Succession Act"
+        ),
     },
     "consumer_rights": {
         "title": "Consumer Rights & Complaints",
@@ -43,7 +49,8 @@ LEGAL_TOPICS: dict[str, dict[str, str]] = {
             "defective goods, and deficient services."
         ),
         "key_points": (
-            "1. Six basic consumer rights: Safety, Information, Choice, Redressal, Hearing, Education.\n"
+            "1. Six basic consumer rights: Safety, Information, "
+            "Choice, Redressal, Hearing, Education.\n"
             "2. File complaints at the District Consumer Forum (up to ₹1 crore).\n"
             "3. E-filing available at https://edaakhil.nic.in.\n"
             "4. No lawyer needed — you can represent yourself.\n"
@@ -59,7 +66,8 @@ LEGAL_TOPICS: dict[str, dict[str, str]] = {
             "to women facing physical, emotional, sexual, or economic abuse."
         ),
         "key_points": (
-            "1. Domestic violence includes physical, emotional, verbal, sexual, and economic abuse.\n"
+            "1. Domestic violence includes physical, emotional, "
+            "verbal, sexual, and economic abuse.\n"
             "2. Any woman — wife, live-in partner, sister, mother — can seek protection.\n"
             "3. Protection Officers in every district help file applications.\n"
             "4. Courts can issue Protection Orders, Residence Orders, and Monetary Relief.\n"

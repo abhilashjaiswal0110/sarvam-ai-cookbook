@@ -6,10 +6,9 @@ from dataclasses import dataclass
 from typing import IO
 
 from core.constants import SUPPORTED_LANGUAGES
-from core.models import ChatMessage, ConversationSession
+from core.models import ConversationSession
 from core.sarvam_client import SarvamClient
 from core.validators import sanitize_text
-
 
 _DRAFTER_PROMPT = """\
 You are an expert RTI (Right to Information) and formal complaint drafter for Indian citizens.
@@ -143,7 +142,7 @@ class RTIDraftingService:
             draft_regional = draft_official
         else:
             draft_regional = self._client.translate(
-                draft_official, detected_lang, "hi-IN", mode="formal"
+                draft_official, detected_lang, "auto", mode="formal"
             )
 
         return DraftResult(

@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from core.constants import LANGUAGE_SCRIPTS, SUPPORTED_LANGUAGES
-from core.models import ChatMessage, ConversationSession
+from core.models import ConversationSession
 from core.sarvam_client import SarvamClient
 from core.validators import sanitize_text
-
 
 _SYSTEM_PROMPT = """\
 You are a Mother Tongue Tutor helping children (ages 5-10) learn through their \
