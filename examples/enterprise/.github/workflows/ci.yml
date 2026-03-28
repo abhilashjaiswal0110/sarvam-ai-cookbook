@@ -1,0 +1,48 @@
+name: Enterprise Use Cases CI
+
+on:
+  push:
+    paths:
+      - "examples/enterprise/**"
+  pull_request:
+    paths:
+      - "examples/enterprise/**"
+
+defaults:
+  run:
+    working-directory: examples/enterprise
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check core/ usecases/ tests/
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt mypy types-requests
+      - run: mypy core/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt pytest-cov
+      - run: pytest tests/ -v --cov=core --cov-report=term-missing
+        env:
+          SARVAM_API_KEY: test-key-for-ci
+          APP_ENV: testing

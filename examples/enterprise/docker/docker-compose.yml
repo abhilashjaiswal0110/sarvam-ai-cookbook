@@ -1,0 +1,104 @@
+services:
+  rural-bank-onboarding:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/rural_bank_onboarding/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8501:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  anganwadi-learning:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/anganwadi_learning/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8502:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  mother-tongue-tutor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/mother_tongue_tutor/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8503:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  rti-drafter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/rti_drafter/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8504:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  legal-aid-bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/legal_aid_bot/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8505:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  regional-recipe-narrator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/regional_recipe_narrator/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8506:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  emergency-helpline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/emergency_helpline_transcriber/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8507:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+
+  flood-cyclone-broadcaster:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      streamlit run usecases/flood_cyclone_broadcaster/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8508:8501"
+    env_file:
+      - ../.env
+    restart: unless-stopped
