@@ -79,6 +79,88 @@ class TestITHelpdeskService:
         assert session.language_code == "hi-IN"
         assert "Hindi" in session.system_prompt
 
+    def test_diagnose_english(self, mock_sarvam_client) -> None:
+        from core.models import LanguageDetectionResponse
+        from usecases.it_support_helpdesk.service import ITHelpdeskService
+
+        # Setup mocks
+        mock_sarvam_client.detect_language = MagicMock(
+            return_value=LanguageDetectionResponse(language_code="en-IN", confidence=0.99)
+        )
+        mock_sarvam_client.chat = MagicMock(
+            return_value="**Category:** Network\n**Steps:** 1. Restart VPN"
+        )
+
+        svc = ITHelpdeskService(mock_sarvam_client)
+        session = svc.create_session("diag-1", "en-IN")
+        result = svc.diagnose(session, "vpn not connecting", reasoning_effort="medium")
+
+        assert result["detected_lang"] == "en-IN"
+        assert result["answer"] == "**Category:** Network\n**Steps:** 1. Restart VPN"
+        assert result["answer_en"] == result["answer"]  # English, no translation
+        assert result["auto_category"] == "Network & Connectivity"
+        assert len(result["kb_hits"]) > 0
+        assert result["audio"] == []
+
+        # Verify reasoning_effort was forwarded to chat
+        mock_sarvam_client.chat.assert_called_once()
+        call_kwargs = mock_sarvam_client.chat.call_args
+        assert call_kwargs.kwargs.get("reasoning_effort") == "medium"
+
+    def test_diagnose_hindi_with_translation(self, mock_sarvam_client) -> None:
+        from core.models import LanguageDetectionResponse
+        from usecases.it_support_helpdesk.service import ITHelpdeskService
+
+        mock_sarvam_client.detect_language = MagicMock(
+            return_value=LanguageDetectionResponse(language_code="hi-IN", confidence=0.95)
+        )
+        mock_sarvam_client.translate = MagicMock(side_effect=[
+            "printer is not working",   # issue translated to English for KB
+            "English version of reply",  # answer translated to English
+        ])
+        mock_sarvam_client.chat = MagicMock(
+            return_value="प्रिंटर को रीस्टार्ट करें"
+        )
+
+        svc = ITHelpdeskService(mock_sarvam_client)
+        session = svc.create_session("diag-2", "en-IN")
+        result = svc.diagnose(session, "प्रिंटर काम नहीं कर रहा")
+
+        assert result["detected_lang"] == "hi-IN"
+        assert session.language_code == "hi-IN"  # Updated by detection
+        assert result["answer_en"] == "English version of reply"
+        assert "Hindi" in session.system_prompt
+
+    def test_diagnose_with_tts(self, mock_sarvam_client) -> None:
+        from core.models import LanguageDetectionResponse
+        from usecases.it_support_helpdesk.service import ITHelpdeskService
+
+        mock_sarvam_client.detect_language = MagicMock(
+            return_value=LanguageDetectionResponse(language_code="en-IN", confidence=0.99)
+        )
+        mock_sarvam_client.chat = MagicMock(return_value="Restart your laptop.")
+        mock_sarvam_client.text_to_speech = MagicMock(return_value=[b"audio_bytes"])
+
+        svc = ITHelpdeskService(mock_sarvam_client)
+        session = svc.create_session("diag-3", "en-IN")
+        result = svc.diagnose(session, "laptop frozen", tts_enabled=True)
+
+        assert result["audio"] == [b"audio_bytes"]
+        mock_sarvam_client.text_to_speech.assert_called_once()
+
+    def test_diagnose_detection_fallback(self, mock_sarvam_client) -> None:
+        from usecases.it_support_helpdesk.service import ITHelpdeskService
+
+        mock_sarvam_client.detect_language = MagicMock(side_effect=Exception("API down"))
+        mock_sarvam_client.chat = MagicMock(return_value="Check your network settings.")
+
+        svc = ITHelpdeskService(mock_sarvam_client)
+        session = svc.create_session("diag-4", "en-IN")
+        result = svc.diagnose(session, "internet not working")
+
+        assert result["detected_lang"] == "en-IN"  # Falls back to session language
+        assert result["answer"] == "Check your network settings."
+
     def test_auto_priority_critical(self) -> None:
         from usecases.it_support_helpdesk.service import ITHelpdeskService
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from core.constants import SUPPORTED_LANGUAGES
-from core.models import ChatMessage, ConversationSession
+from core.models import ConversationSession
 from core.sarvam_client import SarvamClient
 from core.validators import sanitize_text
 from usecases.it_support_helpdesk.knowledge_base import (
@@ -90,10 +90,11 @@ class ITHelpdeskService:
         """
         issue_text = sanitize_text(issue_text)
 
-        # 1. Detect language
+        # 1. Detect language and update session if detection succeeds
         try:
             lang_resp = self._client.detect_language(issue_text)
             detected_lang = lang_resp.language_code
+            session.language_code = detected_lang
         except Exception:
             detected_lang = session.language_code
 
@@ -111,11 +112,11 @@ class ITHelpdeskService:
         kb_hits = self._kb.search(search_text)
         kb_context = self._kb.format_for_prompt(search_text)
 
-        # 4. Update system prompt with KB context
-        language_name = SUPPORTED_LANGUAGES.get(session.language_code, "English")
+        # 4. Update system prompt with KB context (use detected language)
+        language_name = SUPPORTED_LANGUAGES.get(detected_lang, "English")
         session.system_prompt = _SYSTEM_PROMPT.format(
             language_name=language_name,
-            language_code=session.language_code,
+            language_code=detected_lang,
             knowledge_context=kb_context,
         )
 
@@ -125,6 +126,7 @@ class ITHelpdeskService:
             session.get_messages(),
             temperature=0.5,
             max_tokens=1024,
+            reasoning_effort=reasoning_effort,
         )
         session.add_assistant_message(answer)
 
