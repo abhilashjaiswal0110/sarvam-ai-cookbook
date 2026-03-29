@@ -8,9 +8,17 @@ import os
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
-from config import TICKET_STATUSES, PRIORITY_LEVELS, ISSUE_CATEGORIES, TICKETS_FILE
+from usecases.it_support_helpdesk.knowledge_base import (
+    ISSUE_CATEGORIES,
+    PRIORITY_LEVELS,
+    TICKET_STATUSES,
+)
+
+_TICKETS_DIR = Path(__file__).resolve().parent
+_DEFAULT_TICKETS_FILE = str(_TICKETS_DIR / "tickets.json")
 
 
 class TicketNotFoundError(Exception):
@@ -18,19 +26,12 @@ class TicketNotFoundError(Exception):
 
 
 class TicketManager:
-    """CRUD operations for IT support tickets backed by a local JSON file.
+    """CRUD operations for IT support tickets backed by a local JSON file."""
 
-    Args:
-        storage_path: Path to the JSON file used for persistence.
-            Defaults to TICKETS_FILE from config.
-    """
-
-    def __init__(self, storage_path: str = TICKETS_FILE):
+    def __init__(self, storage_path: str = _DEFAULT_TICKETS_FILE) -> None:
         self._path = storage_path
         self._logger = logging.getLogger(__name__)
         self._tickets: dict[str, dict] = self._load()
-
-    # ── Persistence helpers ─────────────────────────────────────────────────
 
     def _load(self) -> dict[str, dict]:
         if os.path.exists(self._path):
@@ -58,8 +59,6 @@ class TicketManager:
             try:
                 os.replace(tmp, self._path)
             except PermissionError:
-                # On Windows, os.replace may fail with locked files;
-                # fall back to a direct overwrite.
                 with open(self._path, "w", encoding="utf-8") as f:
                     json.dump(self._tickets, f, ensure_ascii=False, indent=2)
                 os.unlink(tmp)
@@ -69,8 +68,6 @@ class TicketManager:
             except OSError:
                 pass
             raise
-
-    # ── Public API ──────────────────────────────────────────────────────────
 
     def create(
         self,
@@ -82,20 +79,7 @@ class TicketManager:
         user_language: str = "en-IN",
         resolution_notes: str = "",
     ) -> dict:
-        """Create a new ticket and persist it.
-
-        Args:
-            title: Short summary of the issue.
-            description: Full description of the issue.
-            category: One of ISSUE_CATEGORIES.
-            priority: One of PRIORITY_LEVELS.
-            user_name: Name of the person reporting the issue.
-            user_language: Language code of the reporter.
-            resolution_notes: Optional AI-suggested resolution steps.
-
-        Returns:
-            The created ticket dict.
-        """
+        """Create a new ticket and persist it."""
         if category not in ISSUE_CATEGORIES:
             category = "Other"
         if priority not in PRIORITY_LEVELS:
@@ -121,32 +105,18 @@ class TicketManager:
         return ticket
 
     def get(self, ticket_id: str) -> dict:
-        """Return a ticket by ID.
-
-        Raises:
-            TicketNotFoundError: if the ID does not exist.
-        """
+        """Return a ticket by ID."""
         ticket = self._tickets.get(ticket_id)
         if ticket is None:
             raise TicketNotFoundError(f"Ticket {ticket_id!r} not found.")
         return ticket
 
     def update_status(self, ticket_id: str, status: str) -> dict:
-        """Update the status of an existing ticket.
-
-        Args:
-            ticket_id: The ticket to update.
-            status: New status — must be one of TICKET_STATUSES.
-
-        Returns:
-            The updated ticket dict.
-
-        Raises:
-            TicketNotFoundError: if the ID does not exist.
-            ValueError: if the status is invalid.
-        """
+        """Update the status of an existing ticket."""
         if status not in TICKET_STATUSES:
-            raise ValueError(f"Invalid status {status!r}. Must be one of {TICKET_STATUSES}.")
+            raise ValueError(
+                f"Invalid status {status!r}. Must be one of {TICKET_STATUSES}."
+            )
         ticket = self.get(ticket_id)
         ticket["status"] = status
         ticket["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -167,10 +137,7 @@ class TicketManager:
         category: Optional[str] = None,
         priority: Optional[str] = None,
     ) -> list[dict]:
-        """Return tickets, optionally filtered by status, category, or priority.
-
-        Results are sorted newest-first by created_at.
-        """
+        """Return tickets, optionally filtered. Sorted newest-first."""
         tickets = list(self._tickets.values())
         if status:
             tickets = [t for t in tickets if t["status"] == status]
@@ -190,7 +157,9 @@ class TicketManager:
         by_priority = {p: 0 for p in PRIORITY_LEVELS}
 
         for t in all_tickets:
-            by_status[t.get("status", "Open")] = by_status.get(t.get("status", "Open"), 0) + 1
+            by_status[t.get("status", "Open")] = (
+                by_status.get(t.get("status", "Open"), 0) + 1
+            )
             cat = t.get("category", "Other")
             by_category[cat] = by_category.get(cat, 0) + 1
             pri = t.get("priority", "Medium")

@@ -180,7 +180,8 @@ KNOWLEDGE_BASE: list[dict] = [
         "solution": (
             "1. Restart your computer and let it complete any pending updates.\n"
             "2. Run Windows Update Troubleshooter: Settings → System → Troubleshoot → Windows Update.\n"
-            "3. Clear update cache: stop Windows Update service → delete C:\\Windows\\SoftwareDistribution → restart service.\n"
+            "3. Clear update cache: stop Windows Update service → delete "
+            "C:\\Windows\\SoftwareDistribution → restart service.\n"
             "4. Note the error code (e.g., 0x80070002) and search Microsoft support for it.\n"
             "5. Run 'sfc /scannow' in Command Prompt (as Administrator) to fix system files."
         ),
@@ -330,24 +331,45 @@ KNOWLEDGE_BASE: list[dict] = [
             "1. Check the company software catalog on the intranet — many tools are pre-approved.\n"
             "2. Raise a software request ticket with: software name, version, business justification.\n"
             "3. Get manager approval — IT will require it before installation.\n"
-            "4. IT will deploy approved software via the endpoint management system (typically within 2 business days)."
+            "4. IT will deploy approved software via the endpoint management system "
+            "(typically within 2 business days)."
         ),
         "escalate_if": "Always raise a formal request — unauthorized software installs are a security risk.",
     },
+]
+
+# ── Issue categories and priority keywords ─────────────────────────────────
+
+ISSUE_CATEGORIES = [
+    "Network & Connectivity",
+    "Hardware",
+    "Software & Applications",
+    "Security & Access",
+    "Email & Collaboration",
+    "Other",
+]
+
+PRIORITY_LEVELS = ["Low", "Medium", "High", "Critical"]
+TICKET_STATUSES = ["Open", "In Progress", "Resolved", "Closed"]
+
+CRITICAL_KEYWORDS = [
+    "ransomware", "virus", "malware", "data breach", "hacked", "security incident",
+    "server down", "production down", "complete outage", "data loss", "stolen",
+]
+HIGH_KEYWORDS = [
+    "cannot work", "all users affected", "urgent", "deadline", "client meeting",
+    "presentation", "locked out", "cannot access", "entire team", "blocked",
 ]
 
 
 class ITKnowledgeBase:
     """Search and retrieve solutions from the pre-built IT knowledge base."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._entries = KNOWLEDGE_BASE
 
     def search(self, query: str, max_results: int = 3) -> list[dict]:
-        """Return up to max_results entries whose keywords match the query.
-
-        Scoring: 2 points per keyword hit in title, 1 point per hit in keywords list.
-        """
+        """Return up to max_results entries whose keywords match the query."""
         query_lower = query.lower()
         scored: list[tuple[int, dict]] = []
 
@@ -379,9 +401,13 @@ class ITKnowledgeBase:
         """Return all entries for the given category."""
         return [e for e in self._entries if e["category"] == category]
 
-    def get_by_id(self, article_id: str) -> dict | None:
-        """Return a single KB entry by its ID, or None if not found."""
-        for entry in self._entries:
-            if entry["id"] == article_id:
-                return entry
-        return None
+    def format_for_prompt(self, query: str) -> str:
+        """Search KB and format results as context for the LLM."""
+        hits = self.search(query, max_results=2)
+        if not hits:
+            return ""
+        lines = ["Relevant KB articles found:"]
+        for hit in hits:
+            lines.append(f"- [{hit['id']}] {hit['title']}")
+            lines.append(f"  Solution: {hit['solution']}")
+        return "\n".join(lines)

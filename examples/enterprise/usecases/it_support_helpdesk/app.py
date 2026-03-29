@@ -1,61 +1,59 @@
-"""Multilingual IT Support Helpdesk — Streamlit application.
+"""IT Support Helpdesk — Streamlit Application.
 
-Run with:
-    streamlit run app.py
+Multilingual IT support with AI diagnostics, knowledge base, ticket management,
+and voice input/output — built on the Sarvam Enterprise framework.
 """
 
-import os
+from __future__ import annotations
+
+import sys
+import uuid
+from pathlib import Path
+
+# Ensure enterprise root is importable
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import streamlit as st
-from dotenv import load_dotenv
 
-from config import (
-    SUPPORTED_LANGUAGES,
+from core.config import get_settings
+from core.constants import SUPPORTED_LANGUAGES
+from core.logging_config import configure_logging
+from core.sarvam_client import SarvamClient
+from usecases.it_support_helpdesk.knowledge_base import (
     ISSUE_CATEGORIES,
     PRIORITY_LEVELS,
     TICKET_STATUSES,
-    CRITICAL_KEYWORDS,
-    HIGH_KEYWORDS,
 )
-from knowledge_base import ITKnowledgeBase
-from sarvam_client import SarvamClient, SarvamAPIError
-from ticket_manager import TicketManager
+from usecases.it_support_helpdesk.service import ITHelpdeskService
+from usecases.it_support_helpdesk.ticket_manager import TicketManager
 
-load_dotenv()
+configure_logging()
 
 # ── Page config ─────────────────────────────────────────────────────────────
 
-st.set_page_config(
-    page_title="IT Support Helpdesk",
-    page_icon="🖥️",
-    layout="wide",
-)
+st.set_page_config(page_title="IT Support Helpdesk", page_icon="🖥️", layout="wide")
 
 # ── Session state defaults ───────────────────────────────────────────────────
 
-defaults = {
-    "chat_history": [],       # list of {"role": ..., "content": ...}
+_DEFAULTS = {
+    "session": None,
+    "chat_history": [],
     "language": "en-IN",
     "user_name": "Employee",
-    "pending_ticket": None,   # pre-filled ticket data after a chat session
-    "last_response": "",      # last AI response text for TTS
+    "pending_ticket": None,
+    "last_response": "",
 }
-for key, val in defaults.items():
+for key, val in _DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ── Sidebar: configuration ───────────────────────────────────────────────────
+# ── Sidebar ──────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.title("🖥️ IT Helpdesk")
     st.markdown("---")
 
-    api_key = os.getenv("SARVAM_API_KEY", "")
-    if not api_key:
-        api_key = st.text_input("Sarvam API Key", type="password", placeholder="Enter your API key")
-        if not api_key:
-            st.warning("Enter your Sarvam API key to continue.")
-            st.stop()
+    settings = get_settings()
 
     st.session_state.user_name = st.text_input(
         "Your Name", value=st.session_state.user_name
@@ -77,6 +75,17 @@ with st.sidebar:
     )
     tts_enabled = st.checkbox("Read responses aloud (TTS)", value=False)
 
+    if st.button("Start New Session"):
+        sid = uuid.uuid4().hex[:8]
+        client = SarvamClient(settings.sarvam_api_key)
+        service = ITHelpdeskService(client)
+        st.session_state.session = service.create_session(
+            sid, st.session_state.language
+        )
+        st.session_state.chat_history = []
+        st.session_state.pending_ticket = None
+        st.rerun()
+
     st.markdown("---")
     st.markdown("**Quick Links**")
     st.markdown("- Password Reset Portal")
@@ -85,47 +94,9 @@ with st.sidebar:
 
 # ── Initialise services ──────────────────────────────────────────────────────
 
-client = SarvamClient(api_key)
-kb = ITKnowledgeBase()
+client = SarvamClient(settings.sarvam_api_key)
+service = ITHelpdeskService(client)
 tickets = TicketManager()
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def _auto_priority(text: str) -> str:
-    """Derive a priority level from issue keywords."""
-    lower = text.lower()
-    if any(kw in lower for kw in CRITICAL_KEYWORDS):
-        return "Critical"
-    if any(kw in lower for kw in HIGH_KEYWORDS):
-        return "High"
-    return "Medium"
-
-
-def _auto_category(text: str) -> str:
-    """Map an issue description to the most likely category via keyword heuristics."""
-    mapping = {
-        "Network & Connectivity": ["vpn", "wifi", "internet", "network", "dns", "slow connection", "bandwidth"],
-        "Hardware": ["laptop", "printer", "monitor", "keyboard", "mouse", "screen", "hardware"],
-        "Software & Applications": ["office", "word", "excel", "teams", "browser", "install", "crash", "software"],
-        "Security & Access": ["password", "locked", "phishing", "mfa", "hack", "account", "permissions"],
-        "Email & Collaboration": ["email", "outlook", "teams", "zoom", "sharepoint", "calendar", "meeting"],
-    }
-    lower = text.lower()
-    for category, keywords in mapping.items():
-        if any(kw in lower for kw in keywords):
-            return category
-    return "Other"
-
-
-def _play_tts(text: str, language: str) -> None:
-    """Request TTS for a text snippet and render an audio player."""
-    with st.spinner("Generating audio…"):
-        audio_bytes = client.text_to_speech(text[:500], language)
-    if audio_bytes:
-        st.audio(audio_bytes, format="audio/wav")
-    else:
-        st.info("TTS is not available for this language / content length.")
-
 
 # ── Main tabs ────────────────────────────────────────────────────────────────
 
@@ -144,20 +115,27 @@ with tab_report:
         "The AI will diagnose the issue, suggest solutions, and offer to raise a support ticket."
     )
 
+    if not st.session_state.session:
+        sid = uuid.uuid4().hex[:8]
+        st.session_state.session = service.create_session(
+            sid, st.session_state.language
+        )
+
     # ── Voice input ──────────────────────────────────────────────────────────
     with st.expander("🎙️ Upload audio to describe your issue"):
-        audio_file = st.file_uploader(
-            "Upload WAV (max 10 MB)", type=["wav"]
-        )
+        audio_file = st.file_uploader("Upload WAV (max 10 MB)", type=["wav"])
         if audio_file and st.button("Transcribe Audio"):
             with st.spinner("Transcribing…"):
                 try:
-                    transcript = client.speech_to_text(
-                        audio_file.read(), st.session_state.language
+                    import io
+                    stt_resp = client.speech_to_text(
+                        io.BytesIO(audio_file.read()),
+                        audio_file.name,
+                        st.session_state.language,
                     )
-                    st.success(f"Transcript: {transcript}")
-                    st.session_state["_prefill"] = transcript
-                except SarvamAPIError as e:
+                    st.success(f"Transcript: {stt_resp.transcript}")
+                    st.session_state["_prefill"] = stt_resp.transcript
+                except Exception as e:
                     st.error(f"Transcription error: {e}")
 
     # ── Chat interface ───────────────────────────────────────────────────────
@@ -174,61 +152,35 @@ with tab_report:
     ) or prefill
 
     if user_input:
-        # Show user message
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
 
         with st.chat_message("assistant"):
             with st.spinner("Analysing your issue…"):
-                # 1. Detect language
-                try:
-                    lang_info = client.detect_language(user_input)
-                    detected_lang = lang_info.get("language_code", st.session_state.language)
-                except SarvamAPIError:
-                    detected_lang = st.session_state.language
+                result = service.diagnose(
+                    st.session_state.session,
+                    user_input,
+                    reasoning_effort=reasoning,
+                    tts_enabled=tts_enabled,
+                )
 
-                # 2. Search knowledge base (translate to English if needed)
-                try:
-                    search_text = (
-                        client.translate(user_input, detected_lang)
-                        if detected_lang != "en-IN"
-                        else user_input
-                    )
-                except SarvamAPIError:
-                    search_text = user_input
+            st.markdown(result["answer"])
 
-                kb_hits = kb.search(search_text)
+            if tts_enabled and result["audio"]:
+                combined = b"".join(result["audio"])
+                if combined:
+                    st.audio(combined, format="audio/wav")
 
-                # 3. Build enhanced prompt with KB context
-                kb_context = ""
-                if kb_hits:
-                    kb_context = "\n\nRelevant KB articles found:\n"
-                    for hit in kb_hits[:2]:
-                        kb_context += f"- [{hit['id']}] {hit['title']}\n"
-
-                messages = st.session_state.chat_history.copy()
-                if kb_context:
-                    messages[-1]["content"] += kb_context
-
-                # 4. Call sarvam-m
-                try:
-                    reply = client.chat(messages, reasoning_effort=reasoning)
-                except SarvamAPIError as e:
-                    reply = f"We're unable to connect to the service right now. Error: {e}"
-
-            st.markdown(reply)
-
-            if tts_enabled:
-                _play_tts(reply, detected_lang)
-
-        st.session_state.chat_history.append({"role": "assistant", "content": reply})
-        st.session_state.last_response = reply
+        st.session_state.chat_history.append(
+            {"role": "assistant", "content": result["answer"]}
+        )
+        st.session_state.last_response = result["answer"]
 
         # Show KB suggestions inline
-        if kb_hits:
+        if result["kb_hits"]:
             with st.expander("📖 Related Knowledge Base Articles"):
-                for hit in kb_hits:
+                for hit in result["kb_hits"]:
                     st.markdown(f"**[{hit['id']}] {hit['title']}**")
                     st.markdown(hit["solution"])
                     st.markdown("---")
@@ -237,10 +189,10 @@ with tab_report:
         st.session_state.pending_ticket = {
             "title": user_input[:80],
             "description": user_input,
-            "category": _auto_category(search_text),
-            "priority": _auto_priority(search_text),
-            "resolution_notes": reply,
-            "detected_lang": detected_lang,
+            "category": result["auto_category"],
+            "priority": result["auto_priority"],
+            "resolution_notes": result["answer"],
+            "detected_lang": result["detected_lang"],
         }
 
     # ── Ticket creation from current conversation ────────────────────────────
@@ -264,7 +216,9 @@ with tab_report:
                     PRIORITY_LEVELS,
                     index=PRIORITY_LEVELS.index(pt["priority"]),
                 )
-            description = st.text_area("Description", value=pt["description"], height=100)
+            description = st.text_area(
+                "Description", value=pt["description"], height=100
+            )
 
             submitted = st.form_submit_button("🎫 Raise Ticket")
             if submitted:
@@ -274,7 +228,9 @@ with tab_report:
                     category=category,
                     priority=priority,
                     user_name=st.session_state.user_name,
-                    user_language=pt.get("detected_lang", st.session_state.language),
+                    user_language=pt.get(
+                        "detected_lang", st.session_state.language
+                    ),
                     resolution_notes=pt["resolution_notes"],
                 )
                 st.success(f"Ticket **{ticket['id']}** created successfully!")
@@ -294,7 +250,6 @@ with tab_report:
 with tab_tickets:
     st.header("Support Tickets")
 
-    # Filters
     col1, col2, col3 = st.columns(3)
     with col1:
         filter_status = st.selectbox("Filter by Status", ["All"] + TICKET_STATUSES)
@@ -333,7 +288,10 @@ with tab_tickets:
                 with col_b:
                     st.markdown(f"**Status:** {ticket['status']}")
                     st.markdown(f"**Created:** {ticket['created_at'][:10]}")
-                    st.markdown(f"**Language:** {SUPPORTED_LANGUAGES.get(ticket['user_language'], ticket['user_language'])}")
+                    st.markdown(
+                        f"**Language:** "
+                        f"{SUPPORTED_LANGUAGES.get(ticket['user_language'], ticket['user_language'])}"
+                    )
 
                 st.markdown("**Description:**")
                 st.markdown(ticket["description"])
@@ -361,7 +319,11 @@ with tab_kb:
     st.header("IT Knowledge Base")
     st.markdown("Browse or search 20+ common IT issue resolutions.")
 
-    search_query = st.text_input("🔍 Search knowledge base", placeholder="e.g., VPN, Outlook, printer…")
+    kb = service._kb
+
+    search_query = st.text_input(
+        "🔍 Search knowledge base", placeholder="e.g., VPN, Outlook, printer…"
+    )
 
     if search_query:
         results = kb.search(search_query, max_results=5)
@@ -376,7 +338,6 @@ with tab_kb:
         else:
             st.info("No matching articles found. Try different keywords.")
     else:
-        # Browse by category
         selected_cat = st.selectbox("Browse by Category", kb.get_all_categories())
         entries = kb.get_by_category(selected_cat)
         for entry in entries:
@@ -394,7 +355,6 @@ with tab_dashboard:
 
     stats = tickets.stats()
 
-    # KPI row
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Tickets", stats["total"])
     col2.metric("Open", stats["by_status"].get("Open", 0))
@@ -417,7 +377,6 @@ with tab_dashboard:
             st.subheader("Tickets by Priority")
             pri_data = {k: v for k, v in stats["by_priority"].items() if v > 0}
             if pri_data:
-                colors = {"Critical": "#e74c3c", "High": "#e67e22", "Medium": "#f1c40f", "Low": "#2ecc71"}
                 st.bar_chart(pd.Series(pri_data))
 
         st.markdown("---")
@@ -435,7 +394,9 @@ with tab_dashboard:
                 }
                 for t in recent
             ]
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(
+                pd.DataFrame(rows), use_container_width=True, hide_index=True
+            )
     else:
         st.info("No tickets yet. Report an issue to get started!")
 
@@ -444,7 +405,7 @@ with tab_dashboard:
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center; color:#888;'>"
-    "Powered by <strong>Sarvam AI</strong> · Multilingual IT Support Helpdesk"
+    "Powered by <strong>Sarvam AI Enterprise</strong> · Multilingual IT Support Helpdesk"
     "</div>",
     unsafe_allow_html=True,
 )
